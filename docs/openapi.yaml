@@ -8,7 +8,7 @@ paths:
       summary: Return a hello message
       responses:
         '200':
-          description: A hello message
+          description: A hello message...
           content:
             application/json:
               schema:
