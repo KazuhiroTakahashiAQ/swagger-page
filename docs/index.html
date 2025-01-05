@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Swagger UI</title>
+    <!-- swagger-ui-dist のCSS -->
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@4/swagger-ui.css" />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+
+    <!-- swagger-ui-dist のJS -->
+    <script src="https://unpkg.com/swagger-ui-dist@4/swagger-ui-bundle.js"></script>
+    <script>
+      window.onload = function() {
+        SwaggerUIBundle({
+          url: "./openapi.yaml",  // 同じディレクトリに置いたopenapi.yamlを読み込む
+          dom_id: '#swagger-ui',
+        });
+      };
+    </script>
+  </body>
+</html>
+
