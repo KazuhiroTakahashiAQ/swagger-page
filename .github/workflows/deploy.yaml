@@ -5,6 +5,7 @@ on:
     branches:
       - 'api-doc-*'   # コミットpush時にもデプロイ
   pull_request:
+    types: [opened, synchronize]
     branches:
       - 'api-doc-*'   # PR作成/更新時にもデプロイ
 
