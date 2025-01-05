@@ -37,10 +37,8 @@ jobs:
       # 5) (追加) PR本文の先頭に GitHub PagesのURLを貼り付けるステップ
       - name: Prepend GitHub Pages URL to PR body
         # pull_request イベント時のみ動かす
-        if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
-          ref: ${{ github.head_ref }}
           script: |
             // 1) ブランチ名からURLを組み立てる
             const branchName = "${{ steps.get_branch.outputs.BRANCH_NAME }}";
