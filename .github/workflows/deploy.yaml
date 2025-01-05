@@ -3,10 +3,10 @@ name: Deploy Swagger UI to GitHub Pages
 on:
   push:
     branches:
-      - 'api-doc-*'   # ← ここをapi-doc/**から変更
+      - 'api-doc-*'
   pull_request:
     branches:
-      - 'api-doc-*'   # ← 同上
+      - 'api-doc-*'
 
 jobs:
   build-and-deploy:
@@ -35,3 +35,22 @@ jobs:
           publish_branch: gh-pages
           destination_dir: ${{ steps.get_branch.outputs.BRANCH_NAME }}
           # ↑ ブランチ名と同じディレクトリを作成し、その中へ配置
+
+      # 5) Pull Requestが作成(または更新)されたタイミングで、PRにデプロイ先URLをコメント
+      - name: Post a comment to the Pull Request
+        # pull_requestイベントのときだけコメントを投稿したいので条件指定
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const branchName = "${{ steps.get_branch.outputs.BRANCH_NAME }}";
+            // GitHub PagesのURLを組み立てる
+            // ※ <ユーザー名> / <リポジトリ名> をご自身の値に置き換えてください
+            const url = `https://kazuhirotakahashiaq.github.io/swagger-page/${branchName}/index.html`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Swagger UI is deployed here:\n${url}`
+            });
