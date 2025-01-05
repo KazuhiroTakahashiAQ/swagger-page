@@ -45,11 +45,3 @@ paths:
             $ref: '#/definitions/Cluster'
       security:
         - keystone: []
-
-definitions:
-  Cluster:
-    type: object
-    properties:
-      name:
-        description: name of the cluster
-        type: string
