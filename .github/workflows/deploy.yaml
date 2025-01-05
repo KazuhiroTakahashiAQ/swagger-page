@@ -3,39 +3,34 @@ name: Deploy Swagger UI to GitHub Pages
 on:
   push:
     branches:
-      - "api-doc/**"  # api-docから派生した全ブランチを対象
+      - "api-doc"
+      - "api-doc-*"
   pull_request:
     branches:
-      - "api-doc/**"
+      - "api-doc"
+      - "api-doc-*"
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1) リポジトリのチェックアウト
+      # 1) リポジトリをチェックアウト
       - name: Check out
         uses: actions/checkout@v3
 
-      # 2) (必要に応じて) npm install などを実行する
-      #    例えば swagger-ui-dist をビルドしたい場合は入れる
-      #    ここでは何もしない例とする
-      # - name: Install dependencies
-      #   run: npm install
-
-      # 3) ブランチ名を取得しておく
+      # 2) ブランチ名を取得
       - name: Get branch name
         id: get_branch
         run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+
+      # 3) (必要に応じて) swagger-ui-dist のビルド or 静的ファイルコピー等
+      #    今回は特にビルドをしない例として省略
 
       # 4) gh-pagesブランチにデプロイ
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # 公開したいディレクトリ(ここでは docs フォルダを丸ごと)
-          publish_dir: ./docs
-          # 出力先(ディレクトリ名をブランチごとに変える)
+          publish_dir: ./docs            # 公開対象(例: docsフォルダ内に index.html, openapi.yaml など)
           destination_dir: ${{ steps.get_branch.outputs.BRANCH_NAME }}
-          # デプロイ先ブランチ
           publish_branch: gh-pages
-
