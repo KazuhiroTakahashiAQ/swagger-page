@@ -1,0 +1,67 @@
+name: Deploy Swagger UI to GitHub Pages
+
+on:
+  push:
+    branches:
+      - 'api-doc-*'   # コミットpush時にもデプロイ
+  pull_request:
+    branches:
+      - 'api-doc-*'   # PR作成/更新時にもデプロイ
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1) リポジトリのチェックアウト
+      - name: Check out
+        uses: actions/checkout@v3
+
+      # 2) 必要に応じて npm install など
+      # - name: Install dependencies
+      #   run: npm install
+
+      # 3) ブランチ名を取得
+      - name: Get branch name
+        id: get_branch
+        run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
+
+      # 4) gh-pagesブランチにデプロイ
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+          destination_dir: ${{ steps.get_branch.outputs.BRANCH_NAME }}
+
+      # 5) (追加) PR本文の先頭に GitHub PagesのURLを貼り付けるステップ
+      - name: Prepend GitHub Pages URL to PR body
+        # if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const branchName = "${{ steps.get_branch.outputs.BRANCH_NAME }}";
+
+            // GitHubユーザー(またはOrganization)名
+            const owner = context.repo.owner;
+            // リポジトリ名
+            const repo = context.repo.repo;
+
+            // 例: https://<owner>.github.io/<repo>/<branchName>/index.html
+            const pagesUrl = `https://${owner}.github.io/${repo}/${branchName}/index.html`;
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: context.issue.number
+            });
+
+            if (!pr.body.includes(pagesUrl)) {
+              const updatedBody = `${pagesUrl}\n\n${pr.body || ''}`;
+              await github.rest.pulls.update({
+                owner,
+                repo,
+                pull_number: context.issue.number,
+                body: updatedBody
+              });
+            }
