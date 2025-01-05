@@ -3,10 +3,10 @@ name: Deploy Swagger UI to GitHub Pages
 on:
   push:
     branches:
-      - 'api-doc-*'
+      - 'api-doc-*'   # ← ここをapi-doc/**から変更
   pull_request:
     branches:
-      - 'api-doc-*'
+      - 'api-doc-*'   # ← 同上
 
 jobs:
   build-and-deploy:
@@ -17,64 +17,21 @@ jobs:
         uses: actions/checkout@v3
 
       # 2) (必要に応じて) npm install などを実行する
-      #    Swagger UIのビルドが必要ならここで。
-      #    ここではシンプルに静的ファイル (docs/) をそのままデプロイする例
+      #    例: swagger-ui-dist をビルドしたい場合など
       # - name: Install dependencies
       #   run: npm install
 
-      # 3) ブランチ名を取得 (例: api-doc-feature-add-endpoint)
+      # 3) ブランチ名を取得 (api-doc-feature-xxx の部分)
       - name: Get branch name
         id: get_branch
         run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
 
-      # 4) gh-pagesブランチにデプロイ (force_orphan: true でブランチが無ければ作成)
+      # 4) gh-pagesブランチにデプロイ
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          publish_dir: ./docs  # Swagger UIとして公開したい静的ファイルのあるディレクトリ
           publish_branch: gh-pages
           destination_dir: ${{ steps.get_branch.outputs.BRANCH_NAME }}
-          force_orphan: true
-
-      # 5) gh-pages ルートの index.html を更新し、ブランチ別リンクを追記
-      - name: Update gh-pages root index
-        run: |
-          # 現在のgh-pagesブランチをクローン
-          # （--depth=1 で履歴を短くし、fetchが高速化）
-          git clone --depth 1 --branch gh-pages \
-            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ghpages
-          cd ghpages
-
-          # index.html が無い場合は作成する
-          if [ ! -f index.html ]; then
-            echo "<h1>Swagger UI Links</h1>" > index.html
-            echo "<p>Below are deployed branches.</p>" >> index.html
-          fi
-
-          # 今回デプロイしたブランチのリンクを追記
-          echo "<a href='${{ steps.get_branch.outputs.BRANCH_NAME }}/index.html' target='_blank'>${{ steps.get_branch.outputs.BRANCH_NAME }}</a><br>" >> index.html
-
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add index.html
-          git commit -m "Add link for ${{ steps.get_branch.outputs.BRANCH_NAME }}"
-          git push origin gh-pages
-
-      # 6) PRにコメント (Pull Requestイベント時のみ)
-      - name: Post a comment to the Pull Request
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const branchName = "${{ steps.get_branch.outputs.BRANCH_NAME }}";
-            const baseUrl = "https://${{ github.repository_owner }}.github.io/${{ github.repository.split('/')[1] }}";
-            const link = `${baseUrl}/${branchName}/index.html`;
-            const rootLink = `${baseUrl}/`;
-
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `Swagger UI is deployed!\n- **Branch-specific**: [${branchName}](${link})\n- **Root index**: [Open index](${rootLink})`
-            });
+          # ↑ ブランチ名と同じディレクトリを作成し、その中へ配置
