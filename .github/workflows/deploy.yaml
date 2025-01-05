@@ -3,34 +3,35 @@ name: Deploy Swagger UI to GitHub Pages
 on:
   push:
     branches:
-      - "api-doc"
-      - "api-doc-*"
+      - 'api-doc-*'   # ← ここをapi-doc/**から変更
   pull_request:
     branches:
-      - "api-doc"
-      - "api-doc-*"
+      - 'api-doc-*'   # ← 同上
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1) リポジトリをチェックアウト
+      # 1) リポジトリのチェックアウト
       - name: Check out
         uses: actions/checkout@v3
 
-      # 2) ブランチ名を取得
+      # 2) (必要に応じて) npm install などを実行する
+      #    例: swagger-ui-dist をビルドしたい場合など
+      # - name: Install dependencies
+      #   run: npm install
+
+      # 3) ブランチ名を取得 (api-doc-feature-xxx の部分)
       - name: Get branch name
         id: get_branch
         run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
-
-      # 3) (必要に応じて) swagger-ui-dist のビルド or 静的ファイルコピー等
-      #    今回は特にビルドをしない例として省略
 
       # 4) gh-pagesブランチにデプロイ
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs            # 公開対象(例: docsフォルダ内に index.html, openapi.yaml など)
-          destination_dir: ${{ steps.get_branch.outputs.BRANCH_NAME }}
+          publish_dir: ./docs  # Swagger UIとして公開したい静的ファイルのあるディレクトリ
           publish_branch: gh-pages
+          destination_dir: ${{ steps.get_branch.outputs.BRANCH_NAME }}
+          # ↑ ブランチ名と同じディレクトリを作成し、その中へ配置
