@@ -3,10 +3,10 @@ name: Deploy Swagger UI to GitHub Pages
 on:
   push:
     branches:
-      - 'api-doc-*'
+      - 'api-doc-*'   # コミットpush時にもデプロイ
   pull_request:
     branches:
-      - 'api-doc-*'
+      - 'api-doc-*'   # PR作成/更新時にもデプロイ
 
 jobs:
   build-and-deploy:
@@ -16,12 +16,11 @@ jobs:
       - name: Check out
         uses: actions/checkout@v3
 
-      # 2) (必要に応じて) npm install などを実行する
-      #    例: swagger-ui-dist をビルドしたい場合など
+      # 2) 必要に応じて npm install など
       # - name: Install dependencies
       #   run: npm install
 
-      # 3) ブランチ名を取得 (api-doc-feature-xxx の部分)
+      # 3) ブランチ名を取得
       - name: Get branch name
         id: get_branch
         run: echo "BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_OUTPUT
@@ -31,26 +30,36 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs  # Swagger UIとして公開したい静的ファイルのあるディレクトリ
+          publish_dir: ./docs
           publish_branch: gh-pages
           destination_dir: ${{ steps.get_branch.outputs.BRANCH_NAME }}
-          # ↑ ブランチ名と同じディレクトリを作成し、その中へ配置
 
-      # 5) Pull Requestが作成(または更新)されたタイミングで、PRにデプロイ先URLをコメント
-      - name: Post a comment to the Pull Request
-        # pull_requestイベントのときだけコメントを投稿したいので条件指定
+      # 5) (追加) PR本文の先頭に GitHub PagesのURLを貼り付けるステップ
+      - name: Prepend GitHub Pages URL to PR body
+        # pull_request イベント時のみ動かす
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/github-script@v6
         with:
           script: |
+            // 1) ブランチ名からURLを組み立てる
             const branchName = "${{ steps.get_branch.outputs.BRANCH_NAME }}";
-            // GitHub PagesのURLを組み立てる
-            // ※ <ユーザー名> / <リポジトリ名> をご自身の値に置き換えてください
-            const url = `https://kazuhirotakahashiaq.github.io/swagger-page/${branchName}/index.html`;
+            const pagesUrl = `https://<GitHubユーザー名>.github.io/<リポジトリ名>/${branchName}/index.html`;
 
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            // 2) PR情報を取得
+            const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `Swagger UI is deployed here:\n${url}`
+              pull_number: context.issue.number
             });
+
+            // 3) すでに本文中に同じURLが存在するか確認
+            if (!pr.body.includes(pagesUrl)) {
+              // 4) 先頭にURLを追記 (改行を挟む)
+              const updatedBody = `${pagesUrl}\n\n${pr.body || ''}`; 
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                body: updatedBody
+              });
+            }
